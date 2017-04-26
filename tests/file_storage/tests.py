@@ -602,6 +602,53 @@ class CustomStorageTests(FileStorageTests):
         self.storage.delete(second)
 
 
+class OverwritingStorage(FileSystemStorage):
+    def get_available_name(self, name, max_length=None):
+        return name
+
+    def _save(self, name, content, allow_overwrite=True):
+        return super()._save(name, content, allow_overwrite=allow_overwrite)
+
+
+class OverwritingStorageTests(FileStorageTests):
+    storage_class = OverwritingStorage
+
+    def test_save_overwrite_behaviour(self):
+        """
+        Saving to same file name twice *does* overwrite the first file
+        """
+        name = 'test.file'
+
+        self.assertFalse(self.storage.exists(name))
+
+        content_1 = b'content one'
+        content_2 = b'second content'
+        self.assertNotEqual(content_1, content_2)
+
+        f_1 = ContentFile(content_1)
+        f_2 = ContentFile(content_2)
+
+        stored_name_1 = self.storage.save(name, f_1)
+        self.assertEqual(stored_name_1, name)
+        self.assertTrue(self.storage.exists(name))
+        self.assertTrue(
+            os.path.exists(os.path.join(self.temp_dir, name)))
+        self.assertEqual(
+            self.storage.open(name).read(),
+            content_1)
+
+        stored_name_2 = self.storage.save(name, f_2)
+        self.assertEqual(stored_name_2, name)
+        self.assertTrue(self.storage.exists(name))
+        self.assertTrue(
+            os.path.exists(os.path.join(self.temp_dir, name)))
+        self.assertEqual(
+            self.storage.open(name).read(),
+            content_2)
+
+        self.storage.delete(name)
+
+
 class DiscardingFalseContentStorage(FileSystemStorage):
     def _save(self, name, content):
         if content:
