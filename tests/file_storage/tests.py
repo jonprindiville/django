@@ -290,6 +290,42 @@ class FileStorageTests(SimpleTestCase):
 
         self.storage.delete('path/to/test.file')
 
+    def test_save_overwrite_behaviour(self):
+        """
+        Saving to same file name twice doesn't overwrite the first file
+        """
+        name = 'test.file'
+
+        self.assertFalse(self.storage.exists(name))
+
+        content_1 = b'content one'
+        content_2 = b'second content'
+        self.assertNotEqual(content_1, content_2)
+
+        f_1 = ContentFile(content_1)
+        f_2 = ContentFile(content_2)
+
+        stored_name_1 = self.storage.save(name, f_1)
+        self.assertEqual(stored_name_1, name)
+        self.assertTrue(self.storage.exists(stored_name_1))
+        self.assertTrue(
+            os.path.exists(os.path.join(self.temp_dir, stored_name_1)))
+        self.assertEqual(
+            self.storage.open(stored_name_1).read(),
+            content_1)
+
+        stored_name_2 = self.storage.save(name, f_2)
+        self.assertNotEqual(stored_name_2, name)
+        self.assertTrue(self.storage.exists(stored_name_2))
+        self.assertTrue(
+            os.path.exists(os.path.join(self.temp_dir, stored_name_2)))
+        self.assertEqual(
+            self.storage.open(stored_name_2).read(),
+            content_2)
+
+        self.storage.delete(stored_name_1)
+        self.storage.delete(stored_name_2)
+
     def test_save_doesnt_close(self):
         with TemporaryUploadedFile('test', 'text/plain', 1, 'utf8') as file:
             file.write(b'1')
