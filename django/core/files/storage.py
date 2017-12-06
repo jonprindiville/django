@@ -217,7 +217,15 @@ class FileSystemStorage(Storage):
     def _open(self, name, mode='rb'):
         return File(open(self.path(name), mode))
 
-    def _save(self, name, content, allow_overwrite=False):
+    def _get_save_os_open_flags(self):
+        """
+        Return the flags we should use for the os.open call in self._save
+        """
+        # The combination of O_CREAT and O_EXCL makes os.open throw an
+        # OSError if the file already exists before we open it.
+        return (os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_BINARY', 0))
+
+    def _save(self, name, content):
         full_path = self.path(name)
 
         # Create any intermediate directories that do not exist.
@@ -256,13 +264,8 @@ class FileSystemStorage(Storage):
 
                 # This is a normal uploadedfile that we can stream.
                 else:
-                    # The combination of O_CREAT and O_EXCL makes os.open throw an
-                    # OSError if the file already exists before we open it.
-                    flags = (os.O_WRONLY | os.O_CREAT |
-                             (os.O_EXCL if not allow_overwrite else 0) |
-                             getattr(os, 'O_BINARY', 0))
                     # The current umask value is masked out by os.open!
-                    fd = os.open(full_path, flags, 0o666)
+                    fd = os.open(full_path, self._get_save_os_open_flags(), 0o666)
                     _file = None
                     try:
                         locks.lock(fd, locks.LOCK_EX)

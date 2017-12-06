@@ -597,11 +597,29 @@ class CustomStorageTests(FileStorageTests):
 
 
 class OverwritingStorage(FileSystemStorage):
-    def get_available_name(self, name, max_length=None):
-        return name
+    """
+    Like FileSystemStorage but overwrites files instead of trying to find an
+    unsused name.
+    """
 
-    def _save(self, name, content, allow_overwrite=True):
-        return super()._save(name, content, allow_overwrite=allow_overwrite)
+    def _get_save_os_open_flags(self):
+        """
+        Return the flags we should use for the os.open call in self._save
+        """
+        # FileSystemStorage uses the combination of O_CREAT and O_EXCL to make
+        # os.open throw an error if the file exists when opening it. Here we do
+        # *not* want that behaviour, so we omit O_EXCL.
+        return (os.O_WRONLY | os.O_CREAT | getattr(os, 'O_BINARY', 0))
+        return super()._get_save_os_open_flags() & ~os.O_EXCL
+
+    def get_available_name(self, name, max_length=None):
+        """
+        Returns `name`.
+
+        Don't check the filesystem for existing files with the given
+        name, because we're going to allow `os.open` to overwrite things.
+        """
+        return name
 
 
 class OverwritingStorageTests(FileStorageTests):
