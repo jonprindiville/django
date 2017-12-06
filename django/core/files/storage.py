@@ -168,6 +168,7 @@ class FileSystemStorage(Storage):
     """
     Standard filesystem storage
     """
+    ALLOW_OVERWRITE = False
 
     def __init__(self, location=None, base_url=None, file_permissions_mode=None,
                  directory_permissions_mode=None):
@@ -217,7 +218,7 @@ class FileSystemStorage(Storage):
     def _open(self, name, mode='rb'):
         return File(open(self.path(name), mode))
 
-    def _save(self, name, content, allow_overwrite=False):
+    def _save(self, name, content):
         full_path = self.path(name)
 
         # Create any intermediate directories that do not exist.
@@ -259,7 +260,7 @@ class FileSystemStorage(Storage):
                     # The combination of O_CREAT and O_EXCL makes os.open throw an
                     # OSError if the file already exists before we open it.
                     flags = (os.O_WRONLY | os.O_CREAT |
-                             (os.O_EXCL if not allow_overwrite else 0) |
+                             (os.O_EXCL if not self.ALLOW_OVERWRITE else 0) |
                              getattr(os, 'O_BINARY', 0))
                     # The current umask value is masked out by os.open!
                     fd = os.open(full_path, flags, 0o666)

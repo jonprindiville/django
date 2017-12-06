@@ -597,11 +597,10 @@ class CustomStorageTests(FileStorageTests):
 
 
 class OverwritingStorage(FileSystemStorage):
+    ALLOW_OVERWRITE = True
+
     def get_available_name(self, name, max_length=None):
         return name
-
-    def _save(self, name, content, allow_overwrite=True):
-        return super()._save(name, content, allow_overwrite=allow_overwrite)
 
 
 class OverwritingStorageTests(FileStorageTests):
